@@ -15,7 +15,8 @@ class SpotifyPlayer:
             scope=self.scope
         ))
         self.recommender = SongRecommender()
-        self.recommender.played_titles.append(self.sp.current_playback()['item']['name'])
+        if self.sp.current_playback():
+            self.recommender.played_titles.append(self.sp.current_playback()['item']['name'])
 
 
     def get_active_device(self):

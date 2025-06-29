@@ -35,7 +35,7 @@ class SongRecommender:
         self.played_titles = []  
 
 
-    def predict_next_songs(self, track_id: str, n: int = 5):
+    def predict_next_songs(self, track_id: str, n: int = 3):
         """
         Return up to n similar song track_ids for a given input track_id.
         Adds randomness among top-n suggestions.
@@ -109,9 +109,10 @@ class SongRecommender:
         return closest_df_indices.tolist()
     
 
-    def is_duplicate(self, new_title: str, history_titles: list, threshold: int = 90):
+    def is_duplicate(self, new_title: str, history_titles: list, threshold: int = 70):
         for old_title in history_titles:
             similarity = token_sort_ratio(new_title.lower(), old_title.lower())
+            # print(f"'{new_title}' is similar to '{old_title}' with similarity {similarity}.")
             if similarity >= threshold:
                 return True
         return False

@@ -7,7 +7,7 @@ import os
 load_dotenv()
 
 player = SpotifyPlayer(
- client_id=os.getenv("CLIENT_ID"),
+    client_id=os.getenv("CLIENT_ID"),
     client_secret=os.getenv("CLIENT_SECRET"),
     redirect_uri=os.getenv("REDIRECT_URI"),
 )
