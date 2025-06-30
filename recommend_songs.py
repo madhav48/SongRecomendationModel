@@ -5,6 +5,7 @@ from sklearn.metrics import pairwise_distances
 from sklearn_extra.cluster import KMedoids
 import os
 from rapidfuzz.fuzz import token_sort_ratio
+from collections import deque
 
 
 
@@ -32,7 +33,7 @@ class SongRecommender:
         self.track_names = self.df['track_name'].tolist()
         self.track_ids = self.df['track_id'].tolist()
         self.labels = self.kmeans.labels_
-        self.played_titles = []  
+        self.played_titles = deque(maxlen=25)
 
 
     def predict_next_songs(self, track_id: str, n: int = 3, max_tries: int = 10):
