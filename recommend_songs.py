@@ -35,7 +35,7 @@ class SongRecommender:
         self.played_titles = []  
 
 
-    def predict_next_songs(self, track_id: str, n: int = 3):
+    def predict_next_songs(self, track_id: str, n: int = 3, max_tries: int = 10):
         """
         Return up to n similar song track_ids for a given input track_id.
         Adds randomness among top-n suggestions.
@@ -44,31 +44,52 @@ class SongRecommender:
         if track_id not in self.df['track_id'].values:
             print(f"Track ID '{track_id}' not found in the dataset.")
             return []
+        
+        # Add current song to history if not already present.
+        if track_id not in self.played_titles:
+            current_song_name = self.df[self.df['track_id'] == track_id]['track_name'].values[0]
+            self.played_titles.append(current_song_name)
 
         song_index = self.df[self.df['track_id'] == track_id].index[0]
         song_data_pca = self.X_pca[song_index]
         song_data_feat = self.X_df.iloc[song_index].values
 
-        closest_song_indices = self._find_closest_songs(
-            song_data_pca, song_data_feat, song_index, n_neighbors=n
-        )
+        tries = 0
+        batch_size = n
+        offset = 0
+        filtered = []
 
-        recommended_tracks = self.df.iloc[closest_song_indices].copy()
-        recommended_tracks = recommended_tracks.sample(frac=1).reset_index(drop=True)
+        while tries < max_tries:
+            closest_song_indices = self._find_closest_songs(
+                song_data_pca, song_data_feat, song_index, n_neighbors=batch_size + offset
+            )
 
-        # Try filtering out duplicates
-        filtered = [
-            row for _, row in recommended_tracks.iterrows()
-            if not self.is_duplicate(row['track_name'], self.played_titles)
-        ]
+            batch_indices = closest_song_indices[offset:offset + batch_size]
+            recommended_tracks = self.df.iloc[batch_indices].copy()
+            recommended_tracks = recommended_tracks.sample(frac=1).reset_index(drop=True)
 
-        # If no non-duplicates, clear history and retry filtering
+            filtered = [
+                row for _, row in recommended_tracks.iterrows()
+                if not self.is_duplicate(row['track_name'], self.played_titles)
+            ]
+            if filtered:
+                break
+            offset += batch_size
+            tries += 1
+
+        # If still no non-duplicates, clear history and try again with the first batch
         if not filtered:
-            print("No non-duplicate songs found. Clearing history and retrying.")
+            print("No non-duplicate songs found after retries. Clearing history and retrying.")
             self.played_titles.clear()
-            for _, row in recommended_tracks.iterrows():
-                if not self.is_duplicate(row['track_name'], self.played_titles):
-                    filtered.append(row)
+            closest_song_indices = self._find_closest_songs(
+                song_data_pca, song_data_feat, song_index, n_neighbors=batch_size
+            )
+            recommended_tracks = self.df.iloc[closest_song_indices].copy()
+            recommended_tracks = recommended_tracks.sample(frac=1).reset_index(drop=True)
+            filtered = [
+                row for _, row in recommended_tracks.iterrows()
+                if not self.is_duplicate(row['track_name'], self.played_titles)
+            ]
 
         # Still empty -> Allow duplicates (fallback)
         if not filtered:
